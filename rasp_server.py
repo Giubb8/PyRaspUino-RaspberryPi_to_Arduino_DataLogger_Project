@@ -14,21 +14,40 @@ class Profile:
 
 def create_socket():
     s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
-    s.bind('0.0.0.0',5000)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    s.bind(('0.0.0.0',5000))
     s.listen(3)
     return s
 
-def handle_connection(connection,address):
+def login(hashpass,connection):
+    username = connection.recv(1024).decode()
+    password = connection.recv(1024).decode()
+    print(f"UTENTE {username} PASSWORD {password}")
+    if(hashpass==password):
+        print("LE PASSWORD MATCHANO PREGO")
+    else:
+        print("UNLUCKY")
+        print(hashpass)
+        print(password)
+
+def handle_connection(connection,address,hashpass):
     print('Connesso a', address)
-    username=connection.recv(1024)
-    password=connection.recv(1024)
-    print(f"ricevuto {username} {password}")
+    login(hashpass,connection)
     connection.close()
 
+
+def setup():
+    with open("./setup.txt",'r') as setupfile:
+        hashpass=setupfile.readline()
+        return hashpass
+        #print("letto"+hashpass)
+
+
 if __name__=="__main__":
+    hashpass=setup()
     connection=create_socket()
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
         while True:
             conn, address = connection.accept()
-            executor.submit(handle_connection, conn, address)
+            executor.submit(handle_connection, conn, address,hashpass)
