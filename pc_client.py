@@ -53,7 +53,8 @@ if __name__=='__main__':
     setup_parameters=setup()
     connection=connect_to_raspberry()
     session_profile=login(connection)
-
+    string="MONITOR_TH_MEASUREMENT"
+    connection.send(string.encode("utf-8"))
 
 
 

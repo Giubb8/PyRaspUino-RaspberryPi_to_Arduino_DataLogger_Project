@@ -1,5 +1,7 @@
 import socket
 import concurrent.futures
+import arduino_comm as arduino
+import json
 from enum import Enum
 
 #Enum for communication
@@ -42,32 +44,24 @@ def login(hashpass,connection):
         connection.send(bytes(CODES.ERROR_CODE.value,"utf-8"))
         login(hashpass,connection)
 
-
-
-def mesure_temp_and_hum():
-    pass
-
-def see_th_measurement():
-    pass
-
-
 def show_txt():
     pass
 
 
-def handle_connection(connection,address,hashpass):
+def handle_connection(connection,address,hashpass,th_list):
     print('Connected to', address)
     login(hashpass,connection)
     input=""
     while(input!="EXIT"):
         input=connection.recv(1024).decode()
+        print(f"ricevuto: {input}")
         match input:
             case "EXIT":
                 break
-            case "MESURE_TEMPERATURE_AND_HUMIDITY":
-                mesure_temp_and_hum()
-            case "SEE_TH_MEASUREMENT":
-                see_th_measurement()
+            case "MEASURE_TEMPERATURE_AND_HUMIDITY":
+                arduino.measure_temp_and_hum()
+            case "MONITOR_TH_MEASUREMENT":
+                arduino.monitor_th_measurement(th_list)
             case "SHOW_TXT":
                 show_txt()
 
@@ -77,15 +71,17 @@ def handle_connection(connection,address,hashpass):
 def setup():
     with open("./setup.txt",'r') as setupfile:
         hashpass=setupfile.readline()
-        return hashpass
+    with open('temps_and_humidity.json','r+') as file:
+        th_list=json.load(file)
+    return hashpass,th_list #TODO thlist in teoria concorrente,devo gestirlo ?
 
 
 
 if __name__=="__main__":
-    hashpass=setup()
+    hashpass,th_list=setup()
     connection=create_socket()
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
         while True:
             conn, address = connection.accept()
-            executor.submit(handle_connection, conn, address,hashpass)
+            executor.submit(handle_connection, conn, address,hashpass,th_list)
